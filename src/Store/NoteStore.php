@@ -18,10 +18,26 @@ use RuntimeException;
  */
 final class NoteStore
 {
-    /** Whitelisted TTLs, in seconds. Anything else is rejected. */
+    /** Whitelisted clock TTLs, in seconds. Anything else is rejected. */
     public const TTLS = ['1h' => 3600, '1d' => 86400, '7d' => 604800, '30d' => 2592000];
 
     public const DEFAULT_TTL = '7d';
+
+    /**
+     * "Until it is read." A note created with this TTL has no clock expiry at
+     * all: the first read destroys it, and nothing else ever will.
+     */
+    public const TTL_NEVER = 'never';
+
+    /**
+     * Sentinel expiry for TTL_NEVER — the largest value a MariaDB DATETIME can
+     * hold. A sentinel rather than a NULL column keeps `expires_at` NOT NULL and
+     * leaves both hot statements byte-identical: the read still filters on
+     * `expires_at > NOW()` and the purge still deletes `expires_at <= NOW()`.
+     * So there is no new branch on the path that destroys notes, and no way for
+     * the purge job to sweep up a note that was never meant to expire.
+     */
+    private const NEVER_EXPIRES_AT = '9999-12-31 23:59:59';
 
     /** Max base64url payload length. ~32 KB encoded ≈ 23 KB plaintext. */
     public const MAX_PAYLOAD = 32768;
@@ -43,7 +59,7 @@ final class NoteStore
      */
     public function create(string $payloadB64, string $ttl = self::DEFAULT_TTL): string
     {
-        if (!isset(self::TTLS[$ttl])) {
+        if (!self::isValidTtl($ttl)) {
             throw new InvalidTtl($ttl);
         }
         if (strlen($payloadB64) > self::MAX_PAYLOAD) {
@@ -55,9 +71,11 @@ final class NoteStore
             throw new InvalidPayload();
         }
 
-        $expiresAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
-            ->modify('+' . self::TTLS[$ttl] . ' seconds')
-            ->format('Y-m-d H:i:s');
+        $expiresAt = $ttl === self::TTL_NEVER
+            ? self::NEVER_EXPIRES_AT
+            : (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+                ->modify('+' . self::TTLS[$ttl] . ' seconds')
+                ->format('Y-m-d H:i:s');
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO notes (id_hash, payload, expires_at) VALUES (?, ?, ?)'
@@ -86,6 +104,24 @@ final class NoteStore
         }
 
         throw new RuntimeException('Could not allocate a unique note ID.');
+    }
+
+    public static function isValidTtl(string $ttl): bool
+    {
+        return $ttl === self::TTL_NEVER || isset(self::TTLS[$ttl]);
+    }
+
+    /**
+     * How long a note of this TTL occupies its creator's live-note quota.
+     *
+     * A never-expiring note is charged the longest window rather than forever.
+     * The quota is a throttle, not an accounting system — RateLimiter::liveCount()
+     * already explains why it deliberately overcounts — and an entry that never
+     * ages out would let a single unread note hold a slot indefinitely.
+     */
+    public static function quotaSeconds(string $ttl): int
+    {
+        return self::TTLS[$ttl] ?? self::TTLS['30d'];
     }
 
     /**

@@ -18,10 +18,17 @@
 @layer base {
   html { font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif; }
   body { @apply bg-neutral-50 text-neutral-900 antialiased; }
-  main { @apply mx-auto max-w-2xl px-5 py-12 flex flex-col gap-4; }
+  main { @apply flex flex-col gap-4; }
 }
 
 @layer components {
+  /* The single column every page sits in. It wraps <main> rather than being
+     <main>, because the about section and the language footer are siblings of
+     <main> — the bundle owns the inside of #app and must not own the chrome
+     around it. Without a shared wrapper those siblings inherited no width,
+     padding or centring at all. */
+  .page     { @apply mx-auto flex w-full max-w-2xl flex-col gap-4 px-5 py-12; }
+
   .title    { @apply text-2xl font-semibold tracking-tight; }
   .tagline  { @apply text-sm text-neutral-600 leading-relaxed; }
   .label    { @apply text-sm text-neutral-600; }
@@ -62,13 +69,16 @@
   }
   .btn-link { @apply underline underline-offset-2 hover:text-neutral-700 disabled:no-underline; }
 
-  .prose     { @apply text-sm text-neutral-700 leading-relaxed border-t border-neutral-200 pt-8 mt-4; }
+  /* break-words so a long unbroken token in a translation cannot push the
+     column wider than the viewport. */
+  .prose     { @apply text-sm text-neutral-700 leading-relaxed break-words border-t border-neutral-200 pt-8 mt-4; }
   .prose h2  { @apply text-base font-semibold text-neutral-900 mt-6 mb-2; }
   .prose ol  { @apply list-decimal pl-5 space-y-1.5; }
   .prose p   { @apply mb-2; }
   .prose dt  { @apply font-medium text-neutral-900 mt-4; }
   .prose dd  { @apply ml-0 mt-1 text-neutral-600; }
 
+  .stack     { @apply flex flex-col gap-2; }
   .row       { @apply flex items-center gap-3 flex-wrap; }
   .row-end   { @apply justify-end; }
   .field     { @apply flex items-center gap-2; }

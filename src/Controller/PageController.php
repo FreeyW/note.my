@@ -138,14 +138,21 @@ final class PageController
         // server rendered and stays put, so a crawler — and any visitor whose
         // bundle has not loaded yet — sees real content rather than an empty
         // div. Indexable copy cannot depend on JavaScript having run.
-        $body = "<main id=\"app\">\n"
+        //
+        // The .page wrapper is what centres and pads the column. It has to sit
+        // outside <main>, because the about section and the language footer are
+        // siblings of <main> — putting the layout on <main> itself left them
+        // flush against the left edge of the viewport and running off the right.
+        $body = "<div class=\"page\">\n"
+            . "<main id=\"app\">\n"
             . '<h1 class="title">' . $this->esc($i18n->t('create.title')) . "</h1>\n"
             . '<p class="tagline">' . $this->esc($i18n->t('create.tagline')) . "</p>\n"
             . "<noscript>\n<p class=\"notice notice-danger\">"
             . $this->esc($i18n->t('common.unsupported')) . "</p>\n</noscript>\n"
             . "</main>\n"
             . $this->aboutSection($i18n) . "\n"
-            . $this->languageNav($i18n);
+            . $this->languageNav($i18n) . "\n"
+            . "</div>";
 
         return $this->document($lang, $head, $body);
     }
@@ -159,8 +166,9 @@ final class PageController
         $head = $this->head($this->esc($i18n->t('read.title')), '')
             . "\n<meta name=\"robots\" content=\"noindex, nofollow\">";
 
-        $body = "<main id=\"app\"></main>\n<noscript>\n<p class=\"notice notice-danger\">"
-            . $this->esc($i18n->t('common.unsupported')) . "</p>\n</noscript>";
+        $body = "<div class=\"page\">\n<main id=\"app\"></main>\n"
+            . "<noscript>\n<p class=\"notice notice-danger\">"
+            . $this->esc($i18n->t('common.unsupported')) . "</p>\n</noscript>\n</div>";
 
         return $this->document('en', $head, $body);
     }
