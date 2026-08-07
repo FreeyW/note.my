@@ -1,0 +1,41 @@
+# note.my — MariaDB settings.
+# Install as /etc/mysql/mariadb.conf.d/99-notemy.cnf
+
+[mariadb]
+# Having chosen to persist ciphertext, crash safety has to be real, or the
+# architectural trade-off bought nothing. Flush on every commit.
+innodb_flush_log_at_trx_commit = 1
+sync_binlog                    = 1
+
+# READ-COMMITTED reduces gap locking on the expiry index. Note that the
+# destroy semantics do not depend on it: DELETE ... RETURNING yields exactly
+# one winner under REPEATABLE-READ too (tests/race.sh verifies both).
+transaction-isolation          = READ-COMMITTED
+
+# Lets OPTIMIZE TABLE actually return disk to the filesystem.
+innodb_file_per_table          = ON
+
+# SQL containing ciphertext must never reach a log file.
+general_log                    = 0
+slow_query_log                 = 0
+
+# ---------------------------------------------------------------------------
+# Binary log
+# ---------------------------------------------------------------------------
+# MariaDB does not enable binlogging by default, unlike MySQL 8, so there is
+# usually nothing to do. Confirm before going live:
+#
+#     SHOW VARIABLES LIKE 'log_bin';      -- expect OFF
+#
+# A binlog retains the ciphertext of rows that have already been DELETEd.
+# Leaving it on with no expiry silently defeats the destruction mechanism.
+#
+# If replication forces you to enable it, uncomment these:
+#
+#   log_bin                     = /var/log/mysql/mariadb-bin
+#   binlog_expire_logs_seconds  = 86400   # MariaDB 10.6+
+#   # expire_logs_days          = 1       # older versions
+#
+#   # Required, not optional: STATEMENT format is incompatible with
+#   # READ-COMMITTED above and MariaDB will refuse to run.
+#   binlog_format               = ROW

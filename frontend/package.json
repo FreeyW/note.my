@@ -1,0 +1,10 @@
+{
+  "name": "notemy-frontend",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.9.3"
+  }
+}

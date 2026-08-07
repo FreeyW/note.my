@@ -1,0 +1,33 @@
+<?php
+// Copy to config.php and fill in. config.php must be gitignored.
+return [
+    'db' => [
+        // Prefer a unix socket on a single host; set 'host'/'port' instead for TCP.
+        'socket' => '/run/mysqld/mysqld.sock',
+        'dbname' => 'notemy',
+        'user'   => 'notemy',
+        'pass'   => '',
+    ],
+
+    'redis' => ['host' => '127.0.0.1', 'port' => 6379, 'timeout' => 0.2],
+
+    // Used for the same-origin check on every write. No trailing slash.
+    'canonical_origin' => 'https://note.my',
+
+    // HMAC key for network hashing in Redis. Generate once:
+    //   php -r 'echo bin2hex(random_bytes(32));'
+    // Rotating it resets all rate limits, which is harmless.
+    'ip_hash_secret' => '',
+
+    // Asset names and SRI digests are read from public/assets/manifest.json,
+    // written by scripts/build.sh — nothing to configure here.
+
+    'purge_lock' => '/var/lock/notemy-purge.lock',
+
+    // Only set these behind a proxy you control. An untrusted forwarded-for
+    // header would let anyone reset their own rate limit.
+    'proxy' => [
+        // 'client_ip_header' => 'CF-Connecting-IP',
+        // 'trusted_proxies'  => ['173.245.48.0/20', '2400:cb00::/32'],
+    ],
+];

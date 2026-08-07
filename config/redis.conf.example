@@ -1,0 +1,24 @@
+# note.my — Redis settings.
+#
+# Redis stores rate-limit counters and the live-note quota. It holds no user
+# data at all, so losing the entire dataset costs nothing beyond a window of
+# reset limits.
+
+port 6379
+bind 127.0.0.1 -::1
+
+# Persistence off. This is about avoiding BGSAVE fork memory spikes, not
+# privacy — there is nothing here worth protecting.
+save ""
+appendonly no
+
+maxmemory 64mb
+
+# volatile-lru, not allkeys-lru. Rate-limit counters carry a TTL and are safe
+# to evict. The live:* quota sets would, if evicted, hand a network unlimited
+# fresh quota — which is exactly the slow-drip disk filling the quota exists to
+# stop. Everything this app writes sets a TTL, so eviction still has candidates.
+maxmemory-policy volatile-lru
+
+# 64mb is far more than counters need; if this is ever reached, something is
+# wrong rather than merely busy.
