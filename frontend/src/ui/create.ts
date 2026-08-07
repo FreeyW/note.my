@@ -12,11 +12,14 @@ const MAX_PLAINTEXT_BYTES = Math.floor((32768 * 3) / 4) - (2 + 16 + 12 + 16);
 
 /**
  * `never` is not a duration: it asks the server for a note with no expiry at
- * all, which lives until someone reads it. It is last in the list because it is
- * the one choice that leaves ciphertext on the server indefinitely, and the
- * hint below the select says so.
+ * all, which lives until someone reads it. It leads the list and is the
+ * default, because burn-after-reading is what the service is for; the hint
+ * below the select spells out that this leaves ciphertext on the server until
+ * the link is opened.
  */
-const TTLS = ["1h", "1d", "7d", "30d", "never"] as const;
+const TTLS = ["never", "1h", "1d", "7d", "30d"] as const;
+
+const DEFAULT_TTL = "never";
 
 export function renderCreate(): void {
   const textarea = el("textarea", {
@@ -32,13 +35,14 @@ export function renderCreate(): void {
   const ttl = el("select", { class: "select", "aria-label": t("create.ttl") },
     TTLS.map((v) => el("option", { value: v }, [t(`create.ttl.${v}`)])),
   );
-  ttl.value = "7d";
+  ttl.value = DEFAULT_TTL;
 
   const ttlHint = notice("info", t("create.ttl.never.hint"));
-  ttlHint.classList.add("hidden");
-  ttl.addEventListener("change", () => {
+  const syncTtlHint = (): void => {
     ttlHint.classList.toggle("hidden", ttl.value !== "never");
-  });
+  };
+  ttl.addEventListener("change", syncTtlHint);
+  syncTtlHint();
 
   // Two boxes, because a typo in a password that is never echoed back and never
   // recoverable would cost the recipient the note itself: the server holds no
