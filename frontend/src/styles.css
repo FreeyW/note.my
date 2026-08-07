@@ -38,9 +38,10 @@
   .counter-over { @apply text-red-600; }
 
   .note-input {
-    @apply w-full rounded-lg border border-neutral-300 bg-white p-4 leading-relaxed
+    @apply w-full rounded-lg border border-neutral-300 p-4 leading-relaxed
            focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent
            resize-y font-normal;
+    background-color: #FAF9DE;
   }
   .note-body {
     @apply w-full rounded-lg border border-neutral-300 bg-white p-4 whitespace-pre-wrap

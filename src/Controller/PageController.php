@@ -18,6 +18,9 @@ use RuntimeException;
  */
 final class PageController
 {
+    /** Where the "How it works" section sends anyone who wants to check it. */
+    private const SOURCE_URL = 'https://github.com/FreeyW/note.my';
+
     /** @var array{js:string,jsSri:string,css:string,cssSri:string} */
     private array $assets;
 
@@ -205,9 +208,17 @@ final class PageController
                 . "\n<dd>" . $this->esc($i18n->t("faq.a{$n}")) . '</dd>';
         }
 
+        // The one anchor in this section that is not built from a translation.
+        // The URL is a literal rather than a translated string precisely so no
+        // locale file can ever rewrite where "the source" points.
+        $source = '<p>' . $this->esc($i18n->t('about.how.source'))
+            . ' <a class="btn-link" href="' . self::SOURCE_URL . '" rel="noopener">'
+            . self::SOURCE_URL . "</a></p>\n";
+
         return "<section class=\"prose\">\n"
             . '<h2>' . $this->esc($i18n->t('about.how.title')) . "</h2>\n"
             . "<ol>{$steps}\n</ol>\n"
+            . $source
             . '<h2>' . $this->esc($i18n->t('about.why.title')) . "</h2>\n"
             . '<p>' . $this->esc($i18n->t('about.why.body')) . "</p>\n"
             . "<h2>FAQ</h2>\n<dl>{$faq}\n</dl>\n</section>";

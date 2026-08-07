@@ -179,8 +179,14 @@ ok('homepage is cacheable, read page is not',
 
 echo "\n--- 8. Escaping ---\n";
 
+// The source-code link is the one tag the page itself puts inside a <p>, so it
+// is allowed through; anything else opening a tag there came from a translation
+// that escaped its angle brackets, which is the bug this guards against.
 ok('no unescaped angle brackets leaked from translations',
-    !preg_match('#<(dt|dd|li|p)>[^<]*<(?!/)#', $en['body'] . $zh['body']));
+    !preg_match('#<(dt|dd|li|p)>[^<]*<(?!/|a class="btn-link")#', $en['body'] . $zh['body']));
+ok('the how-it-works section links to the source repository',
+    substr_count($en['body'], '<a class="btn-link" href="https://github.com/FreeyW/note.my"') === 1
+    && substr_count($zh['body'], '<a class="btn-link" href="https://github.com/FreeyW/note.my"') === 1);
 ok('SRI still present on both locales',
     preg_match_all('#integrity="sha384-#', $en['body']) === 2
     && preg_match_all('#integrity="sha384-#', $zh['body']) === 2);
