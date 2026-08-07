@@ -10,7 +10,13 @@ import { t } from "../i18n";
  */
 const MAX_PLAINTEXT_BYTES = Math.floor((32768 * 3) / 4) - (2 + 16 + 12 + 16);
 
-const TTLS = ["1h", "1d", "7d", "30d"] as const;
+/**
+ * `never` is not a duration: it asks the server for a note with no expiry at
+ * all, which lives until someone reads it. It is last in the list because it is
+ * the one choice that leaves ciphertext on the server indefinitely, and the
+ * hint below the select says so.
+ */
+const TTLS = ["1h", "1d", "7d", "30d", "never"] as const;
 
 export function renderCreate(): void {
   const textarea = el("textarea", {
@@ -28,21 +34,55 @@ export function renderCreate(): void {
   );
   ttl.value = "7d";
 
+  const ttlHint = notice("info", t("create.ttl.never.hint"));
+  ttlHint.classList.add("hidden");
+  ttl.addEventListener("change", () => {
+    ttlHint.classList.toggle("hidden", ttl.value !== "never");
+  });
+
+  // Two boxes, because a typo in a password that is never echoed back and never
+  // recoverable would cost the recipient the note itself: the server holds no
+  // copy of the password and cannot tell anyone it was wrong.
   const passwordInput = el("input", {
     type: "password",
-    class: "input hidden",
+    class: "input",
     placeholder: t("create.password.placeholder"),
     autocomplete: "new-password",
   });
+  const passwordConfirm = el("input", {
+    type: "password",
+    class: "input",
+    placeholder: t("create.password.confirm"),
+    autocomplete: "new-password",
+  });
+  const passwordStatus = el("p", { class: "status", role: "status" });
+  const passwordFields = el("div", { class: "stack hidden" }, [
+    passwordInput,
+    passwordConfirm,
+    passwordStatus,
+  ]);
+
+  const syncPasswordStatus = (): void => {
+    const mismatch = passwordConfirm.value.length > 0 && passwordInput.value !== passwordConfirm.value;
+    passwordStatus.textContent = mismatch ? t("create.password.mismatch") : "";
+  };
+  passwordInput.addEventListener("input", syncPasswordStatus);
+  passwordConfirm.addEventListener("input", syncPasswordStatus);
+
   const passwordWarning = notice("warn", t("create.password.warning"));
   passwordWarning.classList.add("hidden");
 
   const passwordToggle = el("input", { type: "checkbox", id: "pw-toggle", class: "checkbox" });
   passwordToggle.addEventListener("change", () => {
-    passwordInput.classList.toggle("hidden", !passwordToggle.checked);
+    passwordFields.classList.toggle("hidden", !passwordToggle.checked);
     passwordWarning.classList.toggle("hidden", !passwordToggle.checked);
-    if (passwordToggle.checked) passwordInput.focus();
-    else passwordInput.value = "";
+    if (passwordToggle.checked) {
+      passwordInput.focus();
+    } else {
+      passwordInput.value = "";
+      passwordConfirm.value = "";
+      passwordStatus.textContent = "";
+    }
   });
 
   const status = el("p", { class: "status", role: "status" });
@@ -69,6 +109,21 @@ export function renderCreate(): void {
       return;
     }
 
+    // Both complaints go next to the fields rather than into `status`, which
+    // lives under the button and would say the same thing twice.
+    if (passwordToggle.checked) {
+      if (passwordInput.value.length === 0) {
+        passwordStatus.textContent = t("create.password.empty");
+        passwordInput.focus();
+        return;
+      }
+      if (passwordInput.value !== passwordConfirm.value) {
+        passwordStatus.textContent = t("create.password.mismatch");
+        passwordConfirm.focus();
+        return;
+      }
+    }
+
     const password = passwordToggle.checked ? passwordInput.value : undefined;
     submit.disabled = true;
     status.textContent = password ? t("create.deriving") : t("create.working");
@@ -85,6 +140,8 @@ export function renderCreate(): void {
       // Clear the plaintext from the DOM. This is hygiene, not a guarantee —
       // the string may still exist elsewhere in the engine's heap.
       textarea.value = "";
+      passwordInput.value = "";
+      passwordConfirm.value = "";
       renderResult(link, Boolean(password));
     } catch (error) {
       status.textContent = describe(error);
@@ -100,11 +157,12 @@ export function renderCreate(): void {
       el("label", { class: "field" }, [el("span", { class: "label" }, [t("create.ttl")]), ttl]),
       counter,
     ]),
+    ttlHint,
     el("label", { class: "check-row", for: "pw-toggle" }, [
       passwordToggle,
       el("span", {}, [t("create.password.toggle")]),
     ]),
-    passwordInput,
+    passwordFields,
     passwordWarning,
     submit,
     status,

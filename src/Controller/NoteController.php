@@ -76,7 +76,7 @@ final class NoteController
             return Response::json(['error' => 'bad_request'], 400);
         }
 
-        $this->limiter->trackLive($ip, time() + NoteStore::TTLS[$ttl]);
+        $this->limiter->trackLive($ip, time() + NoteStore::quotaSeconds($ttl));
 
         return Response::json(['id' => $id], 201);
     }

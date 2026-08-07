@@ -96,6 +96,23 @@ ok('all three are the identical value', $expiredRead === $absentRead && $absentR
 ok('expired row NOT deleted by read path (purge owns it)',
     (int) $pdo->query('SELECT COUNT(*) FROM notes')->fetchColumn() === 1);
 
+echo "\n--- 4b. 'never' lives until it is read ---\n";
+
+$pdo->exec('TRUNCATE TABLE notes');
+
+$idNever = $store->create(b64u('no-expiry'), NoteStore::TTL_NEVER);
+$neverRow = $pdo->query('SELECT expires_at FROM notes')->fetchColumn();
+ok('never-expiring note gets the far-future sentinel',
+    str_starts_with((string) $neverRow, '9999-12-31'), (string) $neverRow);
+ok('the purge job leaves it alone', $store->purgeExpiredBatch(1000) === 0
+    && (int) $pdo->query('SELECT COUNT(*) FROM notes')->fetchColumn() === 1);
+ok('reading it still works and still destroys it',
+    $store->takeAndDestroy($idNever) !== null
+    && $store->takeAndDestroy($idNever) === null
+    && (int) $pdo->query('SELECT COUNT(*) FROM notes')->fetchColumn() === 0);
+ok('quota window falls back to the longest TTL',
+    NoteStore::quotaSeconds(NoteStore::TTL_NEVER) === NoteStore::TTLS['30d']);
+
 echo "\n--- 5. Input validation ---\n";
 
 $caught = null;
