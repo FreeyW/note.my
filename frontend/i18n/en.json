@@ -72,5 +72,5 @@
   "read.working": "Retrieving…",
   "read.wrongpassword": "That password is not right. Try again — the content is still on this page, but closing it will lose it.",
   "seo.description": "note.my is an open-source burn-after-reading note service. Notes are encrypted in your browser with AES-256-GCM; the key lives after the # in the link and never reaches the server. Destroyed permanently after one read.",
-  "seo.ogtitle": "note.my — encrypted notes that burn after reading"
+  "seo.ogtitle": "Note.my — encrypted notes that burn after reading"
 }

@@ -50,8 +50,9 @@
     background-color: #FAF9DE;
   }
   .note-body {
-    @apply w-full rounded-lg border border-neutral-300 bg-white p-4 whitespace-pre-wrap
+    @apply w-full rounded-lg border border-neutral-300 p-4 whitespace-pre-wrap
            break-words leading-relaxed;
+    background-color: #FAF9DE;
     font-family: "DM Mono", ui-monospace, monospace;
   }
   .input {
