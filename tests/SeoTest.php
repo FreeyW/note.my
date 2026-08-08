@@ -183,13 +183,71 @@ echo "\n--- 8. Escaping ---\n";
 // is allowed through; anything else opening a tag there came from a translation
 // that escaped its angle brackets, which is the bug this guards against.
 ok('no unescaped angle brackets leaked from translations',
-    !preg_match('#<(dt|dd|li|p)>[^<]*<(?!/|a class="btn-link")#', $en['body'] . $zh['body']));
+    !preg_match('#<(dt|dd|li|p|summary)>[^<]*<(?!/|a class="btn-link")#', $en['body'] . $zh['body']));
 ok('the how-it-works section links to the source repository',
     substr_count($en['body'], '<a class="btn-link" href="https://github.com/FreeyW/note.my"') === 1
     && substr_count($zh['body'], '<a class="btn-link" href="https://github.com/FreeyW/note.my"') === 1);
 ok('SRI still present on both locales',
     preg_match_all('#integrity="sha384-#', $en['body']) === 2
     && preg_match_all('#integrity="sha384-#', $zh['body']) === 2);
+
+echo "\n--- 9. The FAQ is folded, and its text is still in the markup ---\n";
+
+// Collapsed by native disclosure, not by JavaScript or by CSS that hides the
+// text: a crawler reads a closed <details>, and section 4 above already
+// insists every question in the JSON-LD is present as on-page copy.
+ok('five collapsible FAQ entries', substr_count($en['body'], '<details class="faq-item">') === 5,
+    (string) substr_count($en['body'], '<details class="faq-item">'));
+ok('none of them start open', !preg_match('#<details[^>]*\bopen\b#', $en['body'] . $zh['body']));
+ok('every answer is inside the collapsed markup, not fetched later',
+    substr_count($en['body'], '</details>') === 5 && str_contains($enText, 'The decryption key sits after the'));
+ok('no <dl> left behind', !str_contains($en['body'], '<dl>'));
+
+echo "\n--- 10. The brand link ---\n";
+
+$brand = '<header class="brand"><a href="/" title=';
+foreach (['en' => $en, 'zh' => $zh, 'read' => $read] as $label => $page) {
+    ok("{$label}: page carries the top-left brand link", str_contains($page['body'], $brand)
+        && str_contains($page['body'], '>Note.my</a></header>'));
+}
+ok('the brand link is not a second h1', substr_count($read['body'], '<h1') === 0);
+
+echo "\n--- 11. A note URL with no ID ---\n";
+
+// Both are what a truncated paste produces. Neither may reach the reading
+// shell, and neither may answer a browser with a JSON error object.
+foreach (['/n/', '/n'] as $path) {
+    $stub = get("{$base}{$path}");
+    ok("GET {$path} redirects to the create page",
+        $stub['status'] === 302 && (bool) preg_match('#^Location: /\s*$#mi', $stub['headers']),
+        (string) $stub['status']);
+    ok("GET {$path} is not the reading shell", !str_contains($stub['body'], 'id="app"'));
+}
+
+echo "\n--- 12. Unrouted paths get a page, /api/ gets JSON ---\n";
+
+$missing = get("{$base}/no-such-page");
+ok('unknown path returns a 404 HTML page',
+    $missing['status'] === 404 && stripos($missing['headers'], 'Content-Type: text/html') !== false,
+    (string) $missing['status']);
+ok('the 404 page is a real page, not a JSON blob',
+    str_contains($missing['body'], '<h1 class="title">') && !str_contains($missing['body'], '"error"'));
+ok('the 404 page offers a way back to the create page',
+    str_contains($missing['body'], '<a class="btn-link" href="/">'));
+ok('the 404 page is noindex',
+    str_contains($missing['body'], 'name="robots" content="noindex, nofollow"')
+    && stripos($missing['headers'], 'X-Robots-Tag: noindex') !== false);
+ok('the 404 page has no mount point for the bundle', !str_contains($missing['body'], 'id="app"'));
+
+$zhMissing = get("{$base}/zh/no-such-page");
+ok('a 404 under /zh answers in Chinese', str_contains($zhMissing['body'], '<html lang="zh-CN">'));
+
+$apiMissing = get("{$base}/api/nope");
+ok('unknown /api/ path still returns JSON',
+    $apiMissing['status'] === 404
+    && $apiMissing['body'] === '{"error":"not_found"}'
+    && stripos($apiMissing['headers'], 'Content-Type: application/json') !== false,
+    "{$apiMissing['status']} {$apiMissing['body']}");
 
 echo "\n" . str_repeat('=', 52) . "\n";
 echo ($fail === 0 ? "\033[32m" : "\033[31m") . "{$pass} passed, {$fail} failed\033[0m\n\n";

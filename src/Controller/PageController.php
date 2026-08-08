@@ -65,6 +65,49 @@ final class PageController
             ->withHeader('X-Robots-Tag', 'noindex, nofollow');
     }
 
+    /**
+     * /n and /n/ — a note URL with the ID rubbed off.
+     *
+     * These are what a truncated paste, a stale bookmark or a bare click on the
+     * path segment produces, and they are common enough that answering them
+     * with an error page is just rude: there is nothing to read, but there is
+     * something obvious to do next. Send the visitor to the create page.
+     *
+     * No 301. A permanent redirect would be cached by the browser, and /n/ is
+     * one keystroke away from a real note URL — a cached permanent redirect on
+     * that prefix is a trap the next visitor cannot clear.
+     */
+    public function newNote(): Response
+    {
+        return Response::redirect('/', 302)->withHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+
+    /**
+     * Anything that matched no route.
+     *
+     * API clients keep the JSON error object they can parse; a browser gets a
+     * page. The distinction is the path prefix rather than an Accept header,
+     * because /api/ is the whole of the machine-readable surface.
+     */
+    public function notFound(Request $request): Response
+    {
+        if (str_starts_with($request->path, '/api/')) {
+            return Response::json(['error' => 'not_found'], 404);
+        }
+
+        // A mistyped URL under a locale prefix — /zh/faq, /zh/ — is still that
+        // locale's visitor, so answer in the language they were browsing in.
+        $locale = I18n::DEFAULT_LOCALE;
+        foreach (I18n::LOCALES as $code => $meta) {
+            if ($meta['path'] !== '/' && str_starts_with($request->path, $meta['path'] . '/')) {
+                $locale = $code;
+            }
+        }
+
+        return Response::html($this->notFoundShell(new I18n($locale, $this->i18nDir)), 404)
+            ->withHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+
     public function robots(): Response
     {
         $body = "User-agent: *\n"
@@ -141,23 +184,16 @@ final class PageController
         // server rendered and stays put, so a crawler — and any visitor whose
         // bundle has not loaded yet — sees real content rather than an empty
         // div. Indexable copy cannot depend on JavaScript having run.
-        //
-        // The .page wrapper is what centres and pads the column. It has to sit
-        // outside <main>, because the about section and the language footer are
-        // siblings of <main> — putting the layout on <main> itself left them
-        // flush against the left edge of the viewport and running off the right.
-        $body = "<div class=\"page\">\n"
-            . "<main id=\"app\">\n"
+        $body = "<main id=\"app\">\n"
             . '<h1 class="title">' . $this->esc($i18n->t('create.title')) . "</h1>\n"
             . '<p class="tagline">' . $this->esc($i18n->t('create.tagline')) . "</p>\n"
             . "<noscript>\n<p class=\"notice notice-danger\">"
             . $this->esc($i18n->t('common.unsupported')) . "</p>\n</noscript>\n"
             . "</main>\n"
             . $this->aboutSection($i18n) . "\n"
-            . $this->languageNav($i18n) . "\n"
-            . "</div>";
+            . $this->languageNav($i18n);
 
-        return $this->document($lang, $head, $body);
+        return $this->document($lang, $head, $body, $i18n);
     }
 
     private function readShell(): string
@@ -169,11 +205,32 @@ final class PageController
         $head = $this->head($this->esc($i18n->t('read.title')), '')
             . "\n<meta name=\"robots\" content=\"noindex, nofollow\">";
 
-        $body = "<div class=\"page\">\n<main id=\"app\"></main>\n"
+        $body = "<main id=\"app\"></main>\n"
             . "<noscript>\n<p class=\"notice notice-danger\">"
-            . $this->esc($i18n->t('common.unsupported')) . "</p>\n</noscript>\n</div>";
+            . $this->esc($i18n->t('common.unsupported')) . "</p>\n</noscript>";
 
-        return $this->document('en', $head, $body);
+        return $this->document('en', $head, $body, $i18n);
+    }
+
+    /**
+     * The 404 body. Deliberately a dead end with one way out: the brand link in
+     * the corner and the button below it both lead to the create page, which is
+     * the only thing a visitor who landed here can usefully do.
+     */
+    private function notFoundShell(I18n $i18n): string
+    {
+        $head = $this->head($this->esc($i18n->t('notfound.title')), '')
+            . "\n<meta name=\"robots\" content=\"noindex, nofollow\">";
+
+        // No id="app". The bundle owns that element wherever it exists, and it
+        // would replace this copy with a create form the moment it loaded.
+        $body = "<main>\n"
+            . '<h1 class="title">' . $this->esc($i18n->t('notfound.title')) . "</h1>\n"
+            . '<p class="tagline">' . $this->esc($i18n->t('notfound.body')) . "</p>\n"
+            . '<p><a class="btn-link" href="/">' . $this->esc($i18n->t('notfound.home')) . "</a></p>\n"
+            . '</main>';
+
+        return $this->document($i18n->htmlLang(), $head, $body, $i18n);
     }
 
     private function head(string $title, string $description): string
@@ -188,11 +245,33 @@ final class PageController
             . "integrity=\"{$this->assets['cssSri']}\" crossorigin=\"anonymous\">";
     }
 
-    private function document(string $lang, string $head, string $body): string
+    /**
+     * The .page wrapper is what centres and pads the column, and it lives here
+     * rather than in each shell because every page needs it and because the
+     * brand bar has to sit inside it: the about section and the language footer
+     * are siblings of <main>, so putting the layout on <main> itself left them
+     * flush against the left edge of the viewport.
+     */
+    private function document(string $lang, string $head, string $body, I18n $i18n): string
     {
-        return "<!DOCTYPE html>\n<html lang=\"{$lang}\">\n<head>\n{$head}\n</head>\n<body>\n{$body}\n"
+        return "<!DOCTYPE html>\n<html lang=\"{$lang}\">\n<head>\n{$head}\n</head>\n<body>\n"
+            . "<div class=\"page\">\n" . $this->brand($i18n) . "\n{$body}\n</div>\n"
             . "<script src=\"/assets/{$this->assets['js']}\" integrity=\"{$this->assets['jsSri']}\" "
             . "crossorigin=\"anonymous\" defer></script>\n</body>\n</html>\n";
+    }
+
+    /**
+     * Top-left wordmark, on every page including the reading page and the 404.
+     *
+     * It is a plain anchor to /, which is also the only "new note" affordance
+     * the read page has — after a note has been destroyed the visitor is
+     * otherwise at a dead end. Not an <h1>: each page has exactly one, and it
+     * belongs to that page's own subject.
+     */
+    private function brand(I18n $i18n): string
+    {
+        return '<header class="brand"><a href="/" title="'
+            . $this->esc($i18n->t('brand.new')) . '">Note.my</a></header>';
     }
 
     private function aboutSection(I18n $i18n): string
@@ -202,10 +281,18 @@ final class PageController
             $steps .= "\n<li>" . $this->esc($i18n->t("about.how.{$n}")) . '</li>';
         }
 
+        // <details>, not a <dl> with a script: the questions are the scannable
+        // part and the answers are long, so the section is far shorter folded.
+        // Native disclosure means it works with the bundle blocked, keyboard
+        // focus and Ctrl-F both reach a closed answer, and there is no state to
+        // keep. None start open — an open first item is a scroll tax on the
+        // four below it.
         $faq = '';
         for ($n = 1; $n <= 5; $n++) {
-            $faq .= "\n<dt>" . $this->esc($i18n->t("faq.q{$n}")) . '</dt>'
-                . "\n<dd>" . $this->esc($i18n->t("faq.a{$n}")) . '</dd>';
+            $faq .= "\n<details class=\"faq-item\">"
+                . "\n<summary>" . $this->esc($i18n->t("faq.q{$n}")) . '</summary>'
+                . "\n<p>" . $this->esc($i18n->t("faq.a{$n}")) . '</p>'
+                . "\n</details>";
         }
 
         // The one anchor in this section that is not built from a translation.
@@ -221,7 +308,7 @@ final class PageController
             . $source
             . '<h2>' . $this->esc($i18n->t('about.why.title')) . "</h2>\n"
             . '<p>' . $this->esc($i18n->t('about.why.body')) . "</p>\n"
-            . "<h2>FAQ</h2>\n<dl>{$faq}\n</dl>\n</section>";
+            . "<h2>FAQ</h2>\n<div class=\"faq\">{$faq}\n</div>\n</section>";
     }
 
     /**

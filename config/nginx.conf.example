@@ -34,7 +34,13 @@ server {
     # No access logging on note paths. A log line pairing a timestamp with
     # /n/{id} would reconstruct exactly the metadata this service exists to
     # avoid keeping — and would outlive the note itself.
-    location /n/ {
+    #
+    # A regex, not `location /n/`, so that the bare /n is covered too. A prefix
+    # location for "/n/" does not match "/n", which would fall through to the
+    # static handler and 404 from nginx before PHP ever saw it — and would be
+    # logged on the way out, which is the one thing this block exists to avoid.
+    # PHP redirects both /n and /n/ to the create page.
+    location ~ ^/n(/|$) {
         access_log off;
         add_header Cache-Control "no-store" always;
         try_files $uri /index.php$is_args$args;

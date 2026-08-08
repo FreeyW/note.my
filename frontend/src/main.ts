@@ -9,6 +9,12 @@ import { renderRead } from "./ui/read";
  * so the shells stay pure markup with nothing for the bundle to disagree with.
  */
 function boot(): void {
+  // The 404 shell has no #app: it is finished markup, not a mount point, and
+  // renderCreate() would otherwise build a form that mount() silently drops.
+  if (!document.getElementById("app")) return;
+
+  localiseBrand();
+
   if (!isSupported()) {
     mount(el("p", { class: "notice notice-danger" }, [t("common.unsupported")]));
     return;
@@ -21,6 +27,16 @@ function boot(): void {
   } else {
     renderCreate();
   }
+}
+
+/**
+ * The brand link is server rendered, and on the reading page the server has no
+ * locale to render it in — that page picks a language from the browser. Its
+ * tooltip is the one piece of translated copy outside #app, so it is restated
+ * here once the catalogue has resolved.
+ */
+function localiseBrand(): void {
+  document.querySelector(".brand a")?.setAttribute("title", t("brand.new"));
 }
 
 function isReadPage(): boolean {
