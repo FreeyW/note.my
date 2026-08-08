@@ -17,6 +17,9 @@ final class Router
     /** @var list<array{method:string,regex:string,handler:callable}> */
     private array $routes = [];
 
+    /** @var null|callable(Request):Response */
+    private $fallback = null;
+
     /**
      * $pattern uses {name} placeholders, which match one path segment and are
      * passed to the handler as an associative array.
@@ -36,6 +39,20 @@ final class Router
             'regex'   => '#^' . $regex . '$#',
             'handler' => $handler,
         ];
+    }
+
+    /**
+     * What answers a request that matched no route at all.
+     *
+     * Without one, every mistyped URL — a truncated /n/, a stale bookmark —
+     * is answered with a JSON error object, which is the right reply to an
+     * API client and gibberish to the browser that actually asked.
+     *
+     * @param callable(Request):Response $handler
+     */
+    public function fallback(callable $handler): void
+    {
+        $this->fallback = $handler;
     }
 
     public function dispatch(Request $request): Response
@@ -58,6 +75,10 @@ final class Router
 
         if ($pathMatched) {
             return Response::json(['error' => 'method_not_allowed'], 405);
+        }
+
+        if ($this->fallback !== null) {
+            return ($this->fallback)($request);
         }
 
         return Response::json(['error' => 'not_found'], 404);

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace NoteMy\Http;
 
+use InvalidArgumentException;
+
 final class Response
 {
     /** @param array<string,string> $headers */
@@ -39,6 +41,25 @@ final class Response
     public static function xml(string $body, int $status = 200): self
     {
         return new self($status, $body, ['Content-Type' => 'application/xml; charset=utf-8']);
+    }
+
+    /**
+     * A redirect with an empty body.
+     *
+     * $location is written into a header, so it is restricted to an absolute
+     * path built by this application — never anything derived from the request.
+     * A header value containing CR or LF would split the response.
+     */
+    public static function redirect(string $location, int $status = 302): self
+    {
+        if (!str_starts_with($location, '/') || strpbrk($location, "\r\n") !== false) {
+            throw new InvalidArgumentException('redirect target must be a plain absolute path');
+        }
+
+        return new self($status, '', [
+            'Location'      => $location,
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     public function withHeader(string $name, string $value): self

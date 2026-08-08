@@ -74,9 +74,17 @@ $router->add('GET',  '/zh',            $pages->createPage(...));
 $router->add('GET',  '/robots.txt',    $pages->robots(...));
 $router->add('GET',  '/sitemap.xml',   $pages->sitemap(...));
 $router->add('GET',  '/n/{id}',        $pages->readPage(...));
+// A note URL that lost its ID. {id} matches one or more characters, so neither
+// of these reaches readPage — without them /n/ answers a browser with a JSON
+// error object, and /n never reaches PHP at all under the nginx config.
+$router->add('GET',  '/n',             $pages->newNote(...));
+$router->add('GET',  '/n/',            $pages->newNote(...));
 $router->add('POST', '/api/note',      $notes->create(...));
 $router->add('POST', '/api/note/{id}', $notes->read(...));
 $router->add('POST', '/api/report',    $notes->report(...));
+
+// Everything else: a page for browsers, JSON for /api/ clients.
+$router->fallback($pages->notFound(...));
 
 try {
     $response = $router->dispatch($request);

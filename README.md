@@ -156,7 +156,7 @@ changed anything about the destroy path:
 ```
 public/index.php        the only entry point
 src/
-  Router.php            65 lines, no framework
+  Router.php            86 lines, no framework
   Controller/           NoteController (API), PageController (static shells)
   Store/                NoteStore, StatsStore, Database
   Http/                 Request, Response, ClientIp
