@@ -1,0 +1,16 @@
+# Real configuration. Holds the database password and ip_hash_secret; only
+# config.php.example belongs in the repository.
+/config/config.php
+
+# Build output. The hashed bundles are committed deliberately — scripts/
+# verify.sh rebuilds them and compares byte for byte — but the fonts under
+# public/assets/ are copies that build.sh makes from frontend/fonts/, which is
+# where the committed originals live.
+/public/assets/fonts/*
+!/public/assets/fonts/.gitkeep
+
+# Local test scaffolding
+/tests/.env
+
+.DS_Store
+*.swp

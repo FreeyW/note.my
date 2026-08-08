@@ -1,4 +1,4 @@
-e75b2677ffebe76919c4425d1609817af4a8cab0293053db3243abc9bb3f7c55  ./.gitignore
+9b25501753162c9ae6b9b844be509c2efe028b0012508222a80b2e0684cdff54  ./.gitignore
 52867d16c4c2689444a9d455c8597ef8c3fc2101a96f97f2f0ef01b423a8366f  ./README.md
 d97cd56bd3814d40166ee79ee1d8f2e0015b7fc2e23b4467f2efdfd3d46572e4  ./SECURITY.md
 9e89a5dd9bb0af9b50305afaace9ea0d9bdbed4fda465302de060ba70debdf21  ./config/config.php.example
@@ -25,7 +25,7 @@ b5c0980c605a6e839059f524b0166fdeb1e68eab1a3a4e1ba3e6a86cb5d6a616  ./frontend/tai
 3ec5570489dda497d1bbd2443f9d26fc4e6d89f09d0a1601599ff2257f63d044  ./frontend/tsconfig.json
 10f8ae93d9876b2ebe2716ed9f826fa6ba2caf4b0c5b1e7e91c97a86e2ba322b  ./public/assets/app.10f8ae93d9876b2e.js
 c560691d12eec1babcdfee6b0e2067ff49e45e237d85050439e7e558555af8ab  ./public/assets/app.c560691d12eec1ba.css
-9880d8a5be4f10fc4168cf3443337f8fe3d1fe46a2c010a85275a353cdbb7f8f  ./public/assets/fonts/.gitkeep
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./public/assets/fonts/.gitkeep
 ddac1796f0f12bd701b2af12ece2ecd5a41de1b4cad194c333551e0833ab4a6e  ./public/assets/manifest.json
 465f8a80ad97863059ce2c179fbe86147b7677105d9143342db8d35041d2015b  ./public/index.php
 f5ee90fabfd68112c607bb5423c4de74ba1d0ddaca7c105b04f33bd6602b2cae  ./scripts/build.sh
